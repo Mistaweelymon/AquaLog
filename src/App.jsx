@@ -237,7 +237,7 @@ function WaterTab({ logs, onDel, setModal }) {
       <div style={RB}><h2 style={ST}>Water Quality Log</h2><button onClick={() => setModal({type:'addWater'})} className="pbtn">＋ Log Test</button></div>
       {logs.length===0 ? <div style={EC}><div style={{fontSize:36}}>💧</div><div style={{color:'#4a90c4',marginTop:8}}>No water tests logged yet.</div></div> : (
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {(all?logs:logs.slice(0,10)).map(log => <WLR key={log.id} log={log} onDel={() => { if(confirm('Delete this water test?')) onDel(log.id) }} />)}
+          {(all?logs:logs.slice(0,10)).map(log => <WLR key={log.id} log={log} onDel={() => { onDel(log.id) }} />)}
         </div>
       )}
       {logs.length>10 && <button onClick={() => setAll(v=>!v)} className="gbtn" style={{ marginTop:14, display:'block', margin:'14px auto 0' }}>{all?'Show Less':`Show All ${logs.length}`}</button>}
@@ -258,7 +258,7 @@ function FishTab({ fish, onDel, setModal }) {
                 {f.species && <div style={{ fontSize:12, color:'#4a90c4', fontStyle:'italic' }}>{f.species}</div>}</div>
                 <div style={{ display:'flex', gap:6 }}>
                   <button onClick={() => setModal({type:'editFish',payload:f})} className="tbtn2">✏️</button>
-                  <button onClick={() => { if(confirm('Remove?')) onDel(f.id) }} className="tbtn2">🗑️</button>
+                  <button onClick={() => { onDel(f.id) }} className="tbtn2">🗑️</button>
                 </div>
               </div>
               <div style={{ marginTop:10, display:'flex', flexWrap:'wrap', gap:6 }}>
@@ -305,7 +305,7 @@ function ExpensesTab({ expenses, totalSpent, onDel, setModal }) {
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                 <div style={{ fontSize:20, fontWeight:900, color:'#22c55e' }}>${fmt(e.amount)}</div>
-                <button onClick={() => { if(confirm('Delete?')) onDel(e.id) }} className="tbtn2">🗑️</button>
+                <button onClick={() => { onDel(e.id) }} className="tbtn2">🗑️</button>
               </div>
             </div>
           ))}
@@ -333,7 +333,7 @@ function MaintenanceTab({ logs, onDel, setModal }) {
                   {log.notes    && <div style={{ fontSize:12, color:'#64a0c0', marginTop:4, fontStyle:'italic' }}>{log.notes}</div>}
                 </div>
               </div>
-              <button onClick={() => { if(confirm('Delete?')) onDel(log.id) }} className="tbtn2">🗑️</button>
+              <button onClick={() => { onDel(log.id) }} className="tbtn2">🗑️</button>
             </div>
           ))}
         </div>
@@ -400,7 +400,7 @@ function AddFishModal({ onSave, close, existing }) {
 
 function AddExpenseModal({ onSave, close }) {
   const [f, sf] = useState({ date:today(), description:'', category:'Fish', amount:'', vendor:'', notes:'' })
-  const u = k => e => sf(v => ({...v,[k]:e.target.value}))
+  const u = k => e => sf(v => ({ ...v, [k]: e.target.value }))
   return (<>
     <h3 style={MT}>Add Expense</h3>
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
@@ -410,7 +410,10 @@ function AddExpenseModal({ onSave, close }) {
       <Field label="Vendor"><input className="inp" value={f.vendor} onChange={u('vendor')} placeholder="LFS, Amazon…"/></Field>
     </div>
     <Field label="Description"><input className="inp" value={f.description} onChange={u('description')} placeholder="What did you buy?"/></Field>
-    <Field label="Notes"><textarea className="inp" style={{minHeight:55}} value={f.notes} onChange={u('notes')}/></Field>
+    <Field label="Notes">
+      <textarea className="inp" style={{minHeight:55}} value={f.notes}
+        onChange={e => sf(v => ({ ...v, notes: e.target.value }))}/>
+    </Field>
     <ModalActions onSave={() => { if(!f.amount||isNaN(f.amount)) return alert('Valid amount required'); onSave(f); close() }} onCancel={close} label="Save Expense"/>
   </>)
 }
