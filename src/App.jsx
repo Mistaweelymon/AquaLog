@@ -278,6 +278,7 @@ function FishTab({ fish, onDel, setModal }) {
 }
 
 function ExpensesTab({ expenses, totalSpent, onDel, setModal }) {
+  const [confirmId, setConfirmId] = useState(null)
   const byCat = EXPENSE_CATS.map(c => ({ c, t:expenses.filter(e=>e.category===c).reduce((s,e)=>s+parseFloat(e.amount||0),0) })).filter(r=>r.t>0).sort((a,b)=>b.t-a.t)
   return (
     <div>
@@ -297,16 +298,28 @@ function ExpensesTab({ expenses, totalSpent, onDel, setModal }) {
       {expenses.length===0 ? <div style={EC}><div style={{fontSize:36}}>💰</div><div style={{color:'#4a90c4',marginTop:8}}>No expenses logged yet.</div></div> : (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {[...expenses].sort((a,b)=>b.date.localeCompare(a.date)).map(e => (
-            <div key={e.id} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(14,165,233,0.12)', borderRadius:10, padding:'12px 16px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div>
-                <div style={{ fontWeight:700, color:'#e0f0ff' }}>{e.description||e.category}</div>
-                <div style={{ fontSize:12, color:'#4a7a9b' }}>{e.date} · {e.category}{e.vendor?' · '+e.vendor:''}</div>
-                {e.notes && <div style={{ fontSize:11, color:'#4a7a9b', fontStyle:'italic' }}>{e.notes}</div>}
+            <div key={e.id} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(14,165,233,0.12)', borderRadius:10, padding:'12px 16px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div>
+                  <div style={{ fontWeight:700, color:'#e0f0ff' }}>{e.description||e.category}</div>
+                  <div style={{ fontSize:12, color:'#4a7a9b' }}>{e.date} · {e.category}{e.vendor?' · '+e.vendor:''}</div>
+                  {e.notes && <div style={{ fontSize:11, color:'#4a7a9b', fontStyle:'italic', marginTop:2 }}>{e.notes}</div>}
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div style={{ fontSize:20, fontWeight:900, color:'#22c55e' }}>${fmt(e.amount)}</div>
+                  <button onClick={() => setModal({type:'editExpense', payload:e})} className="tbtn2">✏️</button>
+                  <button onClick={() => setConfirmId(e.id)} className="tbtn2">🗑️</button>
+                </div>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <div style={{ fontSize:20, fontWeight:900, color:'#22c55e' }}>${fmt(e.amount)}</div>
-                <button onClick={() => { onDel(e.id) }} className="tbtn2">🗑️</button>
-              </div>
+              {confirmId === e.id && (
+                <div style={{ marginTop:10, padding:'10px 14px', background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <span style={{ fontSize:13, color:'#fca5a5' }}>Delete this expense?</span>
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={() => { onDel(e.id); setConfirmId(null) }} className="dbtn">Yes, delete</button>
+                    <button onClick={() => setConfirmId(null)} className="gbtn" style={{padding:'4px 12px', fontSize:12}}>Cancel</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -398,11 +411,11 @@ function AddFishModal({ onSave, close, existing }) {
   </>)
 }
 
-function AddExpenseModal({ onSave, close }) {
-  const [f, sf] = useState({ date:today(), description:'', category:'Fish', amount:'', vendor:'', notes:'' })
+function AddExpenseModal({ onSave, close, existing }) {
+  const [f, sf] = useState(existing || { date:today(), description:'', category:'Fish', amount:'', vendor:'', notes:'' })
   const u = k => e => sf(v => ({ ...v, [k]: e.target.value }))
   return (<>
-    <h3 style={MT}>Add Expense</h3>
+    <h3 style={MT}>{existing?'Edit':'Add'} Expense</h3>
     <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
       <Field label="Date"><input className="inp" type="date" value={f.date} onChange={u('date')}/></Field>
       <Field label="Amount ($) *"><input className="inp" type="number" step="0.01" value={f.amount} onChange={u('amount')} placeholder="0.00"/></Field>
@@ -411,10 +424,11 @@ function AddExpenseModal({ onSave, close }) {
     </div>
     <Field label="Description"><input className="inp" value={f.description} onChange={u('description')} placeholder="What did you buy?"/></Field>
     <Field label="Notes">
-      <textarea className="inp" style={{minHeight:55}} value={f.notes}
-        onChange={e => sf(v => ({ ...v, notes: e.target.value }))}/>
+      <textarea className="inp" style={{minHeight:70}} value={f.notes}
+        onChange={e => sf(v => ({ ...v, notes: e.target.value }))}
+        placeholder="Any additional notes…"/>
     </Field>
-    <ModalActions onSave={() => { if(!f.amount||isNaN(f.amount)) return alert('Valid amount required'); onSave(f); close() }} onCancel={close} label="Save Expense"/>
+    <ModalActions onSave={() => { if(!f.amount||isNaN(f.amount)) return alert('Valid amount required'); onSave(f); close() }} onCancel={close} label={existing?'Save Changes':'Save Expense'}/>
   </>)
 }
 
@@ -554,7 +568,8 @@ export default function App() {
           {modal.type==='addWater'       && <AddWaterModal       onSave={addWaterLog}    close={() => setModal(null)}/>}
           {modal.type==='addFish'        && <AddFishModal        onSave={addFish}        close={() => setModal(null)}/>}
           {modal.type==='editFish'       && <AddFishModal        onSave={editFish}       close={() => setModal(null)} existing={modal.payload}/>}
-          {modal.type==='addExpense'     && <AddExpenseModal     onSave={addExpense}     close={() => setModal(null)}/>}
+          {modal.type==='addExpense'  && <AddExpenseModal onSave={addExpense}  close={() => setModal(null)}/>}
+          {modal.type==='editExpense' && <AddExpenseModal onSave={(data) => withSync(() => fsSet('expenses', modal.payload.id, {...data, id: modal.payload.id, tankId: activeTankId}))} close={() => setModal(null)} existing={modal.payload}/>}
           {modal.type==='addMaintenance' && <AddMaintenanceModal onSave={addMaintenance} close={() => setModal(null)}/>}
         </Overlay>
       )}
